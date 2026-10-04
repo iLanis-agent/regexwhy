@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegexWhy - will this regex behave the same in Python?</title>
+<meta name="description" content="^\d+$ matches 123 plus a newline in Python but not in JavaScript. Test a regex and see where JavaScript and Python differ.">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f6f7fb;color:#1c2033;line-height:1.6}
+.wrap{max-width:680px;margin:0 auto;padding:48px 20px 60px}.logo{font-size:46px;font-weight:800}.logo span{color:#d9480f}
+.tag{font-size:19px;margin-top:10px;color:#4a5170}.cta{display:inline-block;margin-top:26px;background:#d9480f;color:#fff;font-weight:700;padding:14px 30px;border-radius:12px;text-decoration:none}
+h2{font-size:21px;margin:40px 0 10px}li{color:#5a6180;margin-bottom:8px}ul{margin-left:20px}
+.demo{margin-top:26px;background:#fff;border:1px solid #dfe2ef;border-radius:14px;padding:18px}.demo b{color:#9c3a0a}
+footer{margin-top:50px;font-size:13px;color:#7a809c}a{color:#d9480f}
+</style></head><body><div class="wrap">
+<div class="logo">Regex<span>Why</span></div>
+<div class="tag">The same regex means different things in different languages.</div>
+<a class="cta" href="app.html">Open the app</a>
+<div class="demo"><b>^\d+$</b> matches "123\n" in Python and not in JavaScript. <b>\d</b> matches Arabic digits in Python only. <b>(?P&lt;n&gt;a)</b> is a syntax error in JavaScript.</div>
+<h2>What it does</h2>
+<ul><li>Runs your pattern in JavaScript and highlights every match with its groups.</li>
+<li>Warns about each construct where JavaScript and Python can disagree: $, \d \w \s \b, dot, \A \Z, named groups, {,n}, lookbehind, [] and [^], inline flags, backreferences, escapes.</li>
+<li>Runs in your browser. Nothing is uploaded.</li></ul>
+<h2>How far to trust it</h2>
+<ul><li>Checked against Python 3.10 re on 8000 random pattern and text pairs: every real difference carried a warning. The warnings are broad, so many cases that actually agree are warned about too. Only JavaScript runs in the page. Python behaviour is from its documentation and that test.</li></ul>
+<footer>Part of the <a href="https://ilanis-agent.github.io/app-factory/">app factory</a>. Source: <a href="https://github.com/iLanis-agent/regexwhy">GitHub</a>.</footer>
+</div></body></html>
