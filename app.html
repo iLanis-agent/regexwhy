@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegexWhy app - will this regex behave the same in Python?</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#f6f7fb;color:#1c2033;line-height:1.5}
+.wrap{max-width:860px;margin:0 auto;padding:28px 16px 50px}
+h1{font-size:28px}h1 span{color:#d9480f}.sub{color:#5a6180;margin:6px 0 14px}
+input,textarea{width:100%;background:#fff;color:#1c2033;border:1px solid #c9cde0;border-radius:10px;padding:11px;font:15px ui-monospace,Menlo,Consolas,monospace}
+textarea{height:110px}label{display:block;font-size:13px;color:#5a6180;margin:12px 0 4px}
+.pre button{background:#fff;color:#d9480f;border:1px solid #f1b99d;border-radius:20px;padding:6px 12px;margin:0 6px 6px 0;cursor:pointer;font-size:13px}
+table{width:100%;border-collapse:collapse;margin-top:10px;font-size:14px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid #dfe2ef;vertical-align:top}th{color:#5a6180;font-weight:600}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;color:#9c3a0a;background:#fdeee5;padding:0 3px;border-radius:3px}.err{color:#c92a2a}.ok{color:#2b8a3e}
+h2{font-size:16px;margin:20px 0 4px;color:#d9480f}.note{background:#fff;border-left:3px solid #d9480f;padding:8px 12px;margin:8px 0;border-radius:6px;font-size:14px}.foot{color:#7a809c;font-size:13px;margin-top:18px}a{color:#d9480f}
+mark{background:#ffe066;border-radius:2px}pre.hl{background:#fff;border:1px solid #c9cde0;border-radius:10px;padding:11px;font:14px ui-monospace,Menlo,Consolas,monospace;white-space:pre-wrap;word-break:break-all;margin-top:8px}
+</style></head><body><div class="wrap">
+<h1>Regex<span>Why</span></h1>
+<div class="sub">Test a regex in JavaScript, and see which parts could behave differently in Python (and why).</div>
+<div class="pre" id="pre"></div>
+<label for="re">Pattern</label><input id="re" type="text" spellcheck="false" autocomplete="off">
+<label for="tx">Test text</label><textarea id="tx" spellcheck="false"></textarea>
+<div id="out"></div>
+<div class="foot">The matches come from this browser's JavaScript engine (global search, no flags). The warnings are rules, not a Python run: a warning means the two can differ, not that they will for your text. In a random test the rules missed no real difference, but they also warn about many cases where the engines agreed. Python behaviour is from the Python 3 re documentation. Covers Python 3.10 syntax; newer Python versions add atomic groups and possessive quantifiers. Runs in your browser; nothing is uploaded.</div>
+<div class="foot">Part of the <a href="https://ilanis-agent.github.io/app-factory/">app factory</a>. Source: <a href="https://github.com/iLanis-agent/regexwhy">GitHub</a>.</div>
+</div>
+<script>
+(function (root) {
+  'use strict';
+  // Portability notes: where a JavaScript regex (as run by this page) and a Python 3 re pattern can disagree.
+  // The checks are deliberately broad (a flag means "can differ", not "will differ").
+  var RULES = [
+    ['dollar', /(^|[^\\])(\\\\)*\$/, '$ at the end: Python also matches just before a final newline ("foo$" matches "foo\\n"). JavaScript does not (without the m flag).'],
+    ['class', /\\[dDwWsSbB]/, '\\d \\w \\s \\b: Python 3 str patterns are Unicode-aware (\\d matches Arabic-Indic digits, \\w matches é, \\s matches NBSP). JavaScript is ASCII-only for \\d \\w \\b, and its \\s differs in a few characters (it includes U+FEFF).'],
+    ['dot', /(^|[^\\])(\\\\)*\.(?![^\[]*\])/, '. : JavaScript also refuses \\r, U+2028 and U+2029. Python only refuses \\n.'],
+    ['anchors', /\\[AZ]/, '\\A and \\Z are Python-only anchors. In JavaScript \\A is a literal "A" and \\Z a literal "Z".'],
+    ['pnamed', /\(\?P[<=>]/, '(?P<name>...) and (?P=name) are Python syntax. JavaScript uses (?<name>...) and \\k<name> and throws on the Python form.'],
+    ['jsnamed', /\(\?<[A-Za-z_]/, '(?<name>...) works in JavaScript but not in Python 3.10 and older (it needs (?P<name>...)). Python 3.12 still rejects it.'],
+    ['brace', /\{,\d*\}/, '{,n}: Python treats it as 0 to n repeats. JavaScript treats it as literal text.'],
+    ['lookbehind', /\(\?<[=!]/, 'Lookbehind: JavaScript allows variable width. Python requires a fixed width and throws otherwise.'],
+    ['emptyclass', /\[\^?\](?!\])/, '[] and [^]: in JavaScript they mean "nothing" and "anything". Python reads the first ] as a literal.'],
+    ['inline', /\(\?[a-zA-Z]+[:)]|\(\?-[a-zA-Z]/, 'Inline flags like (?i) or (?s:...): Python supports them, older JavaScript engines throw.'],
+    ['backref', /\\[1-9]/, 'Backreferences: in JavaScript a number with no matching group is an octal escape. Python throws.'],
+    ['atomic', /\(\?>|[*+?}]\+/, 'Atomic groups and possessive quantifiers: not in JavaScript. Python only has them from 3.11.'],
+    ['escape', /\\(?![dDwWsSbBnrtfvxu])[A-Za-z]/, 'Escaped letter with no meaning in one of the languages: JavaScript treats it as the plain letter, Python 3.7+ throws an error (for example \\e or \\k). \\p{..} needs the u flag in JavaScript and does not exist in Python re.'],
+    ['classedge', /\[[^\]]*\\[dDwWsS][^\]]*\]/, 'Inside [...] the same Unicode difference applies to \\d \\w \\s.']
+  ];
+  function lint(src) {
+    var out = [];
+    RULES.forEach(function (r) { if (r[1].test(src)) out.push({ id: r[0], text: r[2] }); });
+    return out;
+  }
+  function run(src, text) {
+    var re;
+    try { re = new RegExp(src, 'g'); } catch (e) { return { ok: false, error: e.message, notes: lint(src), matches: [] }; }
+    var matches = [], m, guard = 0;
+    while ((m = re.exec(text)) !== null && guard++ < 500) {
+      matches.push({ index: m.index, end: m.index + m[0].length, text: m[0], groups: m.slice(1) });
+      if (m[0] === '') re.lastIndex++;
+    }
+    return { ok: true, matches: matches, notes: lint(src) };
+  }
+  function first(src, text) {
+    var re; try { re = new RegExp(src); } catch (e) { return 'ERR'; }
+    var m = re.exec(text); return m ? [m.index, m.index + m[0].length] : null;
+  }
+  var api = { lint: lint, run: run, first: first };
+  if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.RegexWhy = api;
+})(typeof window !== 'undefined' ? window : this);
+
+var P={'Trailing newline':['^\\d+$','123\n'],'Unicode digits':['\\d+','price \u0663\u0664 and 12'],'Named group':['(?<year>\\d{4})-(?<m>\\d{2})','on 2026-10-04'],'Python named group':['(?P<year>\\d{4})','2026'],'Dot and line breaks':['a.b','a\rb a\u2028b a\nb'],'Lookbehind':['(?<=\\$)\\d+','cost $40'],'{,n}':['a{,2}','a{,2}']};
+function esc(s){return String(s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+function vis(s){return esc(s).replace(/\n/g,'\\n').replace(/\r/g,'\\r').replace(/\u2028/g,'\\u2028')}
+var R=document.getElementById('re'),T=document.getElementById('tx'),out=document.getElementById('out');
+function run(){if(!R.value){out.innerHTML='';return}var r=RegexWhy.run(R.value,T.value),h='';
+ if(!r.ok)h+='<div class="note err">JavaScript rejects this pattern: '+esc(r.error)+'</div>';
+ else{h+='<h2>JavaScript matches: '+r.matches.length+'</h2>';
+  if(r.matches.length){var pos=0,hl='';r.matches.forEach(function(m){if(m.end>m.index&&m.index>=pos){hl+=vis(T.value.slice(pos,m.index))+'<mark>'+vis(T.value.slice(m.index,m.end))+'</mark>';pos=m.end}});hl+=vis(T.value.slice(pos));h+='<pre class="hl">'+hl+'</pre>';
+   h+='<table><thead><tr><th>#</th><th>Span</th><th>Match</th><th>Groups</th></tr></thead><tbody>'+r.matches.slice(0,50).map(function(m,i){return'<tr><td>'+(i+1)+'</td><td>'+m.index+'-'+m.end+'</td><td><code>'+vis(m.text)+'</code></td><td>'+(m.groups.length?m.groups.map(function(g){return g===undefined?'<i>unset</i>':'<code>'+vis(g)+'</code>'}).join(' '):'')+'</td></tr>'}).join('')+'</tbody></table>'}}
+ if(r.notes.length){h+='<h2>Could differ in Python</h2>';r.notes.forEach(function(n){h+='<div class="note">'+esc(n.text)+'</div>'})}
+ else if(r.ok)h+='<div class="note ok">No known JavaScript/Python difference in this pattern.</div>';
+ out.innerHTML=h}
+R.addEventListener('input',run);T.addEventListener('input',run);
+var pre=document.getElementById('pre');Object.keys(P).forEach(function(k){var b=document.createElement('button');b.textContent=k;b.onclick=function(){R.value=P[k][0];T.value=P[k][1];run()};pre.appendChild(b)});
+R.value=P['Trailing newline'][0];T.value=P['Trailing newline'][1];run();
+</script></body></html>
